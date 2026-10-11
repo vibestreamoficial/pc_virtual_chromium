@@ -1,0 +1,13 @@
+services:
+  desktop:
+    build: .
+    container_name: pc_virtual_chromium
+    ports:
+      - "6080:6080"   # noVNC (browser)
+      - "5901:5901"   # VNC opcional
+    environment:
+      - VNC_PASSWORD=pcvirtual
+      - RESOLUTION=1280x720
+      - LANG=pt_BR.UTF-8
+    shm_size: "1gb"
+    restart: unless-stopped
