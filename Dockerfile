@@ -2,35 +2,45 @@ FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive \
     DISPLAY=:1 \
-    VNC_PORT=5901 \
-    NO_VNC_PORT=6080 \
     VNC_PASSWORD=pcvirtual \
     RESOLUTION=1280x720 \
-    HOME=/root
+    HOME=/root \
+    LANG=C.UTF-8
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     xfce4 xfce4-terminal \
     tigervnc-standalone-server tigervnc-common \
     novnc websockify \
-    chromium-browser \
     dbus-x11 \
-    fonts-liberation fonts-noto-core \
-    ca-certificates curl wget unzip \
-    supervisor \
-    locales \
-    && locale-gen pt_BR.UTF-8 \
+    fonts-liberation fonts-noto-core fonts-noto-color-emoji \
+    ca-certificates curl wget gnupg \
+    unzip zip \
+    mousepad \
     && rm -rf /var/lib/apt/lists/*
 
-# Chromium no Ubuntu 22.04 às vezes é snap-stub; garante binário
-RUN if [ ! -x /usr/bin/chromium-browser ] && [ -x /usr/bin/chromium ]; then \
-      ln -sf /usr/bin/chromium /usr/bin/chromium-browser; \
-    fi; \
-    if ! command -v chromium-browser >/dev/null 2>&1 && ! command -v chromium >/dev/null 2>&1; then \
-      apt-get update && apt-get install -y --no-install-recommends chromium || true; \
-      rm -rf /var/lib/apt/lists/*; \
-    fi
+# Google Chrome real (Chromium-based) — funciona no Docker sem snap
+RUN wget -q -O /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
+    && apt-get update \
+    && apt-get install -y /tmp/chrome.deb || apt-get install -y -f \
+    && rm -f /tmp/chrome.deb \
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -sf /usr/bin/google-chrome-stable /usr/local/bin/chromium \
+    && ln -sf /usr/bin/google-chrome-stable /usr/local/bin/chrome
 
-COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+# atalho no desktop
+RUN mkdir -p /root/Desktop \
+    && printf '%s\n' \
+      '[Desktop Entry]' \
+      'Version=1.0' \
+      'Type=Application' \
+      'Name=Chromium (Chrome)' \
+      'Exec=google-chrome-stable --no-sandbox --disable-gpu --disable-dev-shm-usage' \
+      'Icon=google-chrome' \
+      'Terminal=false' \
+      'Categories=Network;WebBrowser;' \
+      > /root/Desktop/chrome.desktop \
+    && chmod +x /root/Desktop/chrome.desktop
+
 COPY start.sh /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
 
